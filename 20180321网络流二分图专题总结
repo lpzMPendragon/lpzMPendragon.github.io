@@ -1,0 +1,412 @@
+# 20180321网络流二分图专题总结
+---
+
+这是一场没有任何不爆0机会的考试；
+可怜的蒟蒻瑟瑟发抖在冷冷的冰雨中。没有达到我的预想，失分率太高，说明还是不够熟练，题切得也不够。不过也正常，我比别人切题要慢一些，而且时间也比别人少一些，只学了很短时间就考试考不好也是常事了，自己还是想开一点。
+#①对题分析
+T1:早就想好了方法，但忘了二分图匈牙利算法的模板。趁现在赶紧打一次，以免下次搞事爆炸。
+```cpp
+int find(int centre,int u)
+{
+	for(int i=1;i<=n;i++)
+	{
+		if (i==centre||map[u][i]==0) continue;
+		if (vis[i]) continue;
+		 vis[i]=1;
+		 if (link[i]==-1||find(centre,link[i]))
+		 {
+		 	link[i]=u;
+		 	return 1;
+		 }
+	}
+	return 0;
+}
+```
+（就是那种会写KM却不会写匈牙利的扭曲心情？）
+然后就sb的写了一个奇怪方法（——工——！！）
+KM.10 points;
+果断挼掉。
+1、艺术家与图
+interesting.cpp/in/out
+1s/256M
+【题目描述】
+艺术家喜欢艺术，因此它想让图也充满艺术。他认为充满艺术的图满足以下条件：
+- 没有重边；
+- 存在结点v(称为中心)，使得对于图中的任意结点u，都有边(u,v)和(v,u)，注意自环(v,v)也应该存在；
+- 除去中心外，每个点的入度和出度都恰好为2；
+显然很少有图充满艺术，但艺术家可以把图变得充满艺术：每次他可以增加一条边或者删除一条已经存在的边。
+现在给出图G，艺术家想知道他最少做多少次操作可以使它充满艺术。
+【输入格式】
+第一行包含两个整数n,m，表示结点数和边数。
+接下来的m行每行包含两个整数a,b，描述一条有向边(a,b)。
+输入保证不存在重边，结点从 1开始计数。
+【输出格式】
+输出一个整数：问题的答案。
+【输入输出样例】
+	interesting.in	interesting.out
+样例1	3 7
+1 1
+2 2
+3 1
+1 3
+3 2
+2 3
+3 3	0
+样例2	3 6
+1 1
+2 2
+3 1
+3 2
+2 3
+3 3	1
+样例3	3 1
+2 2	6
+【样例解释】
+样例1已经满足条件，它的中心是3。
+【数据范围】
+对于30%的数据，2 ≤ n ≤ 50, 1 ≤ m ≤ 100，1 ≤ ai, bi ≤ n.
+对于100%的数据，2 ≤ n ≤ 500, 1 ≤ m ≤ 1000，1 ≤ ai, bi ≤ n.
+改之后AC的时候觉得自己太蠢了。
+```cpp
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<algorithm>
+using namespace std;
+int map[1001][1001],vis[1001],in[1001],out[1001],link[1001];
+int n,m;
+int ans=999999999;
+int find(int centre,int u)
+{
+	for(int i=1;i<=n;i++)
+	{
+		if (i==centre||map[u][i]==0) continue;
+		if (vis[i]) continue;
+		 vis[i]=1;
+		 if (link[i]==-1||find(centre,link[i]))
+		 {
+		 	link[i]=u;
+		 	return 1;
+		 }
+	}
+	return 0;
+}
+int solve(int centre)
+{
+	int cnt=0;
+	int s=in[centre]+out[centre]-map[centre][centre];
+	int se=2*n-1-s;
+	memset(link,-1,sizeof(link));
+	for(int i=1;i<=n;i++)
+	{
+		if (i==centre) continue;
+		memset(vis,0,sizeof(vis));
+		if (find(centre,i)) cnt++;
+	}
+	se+=m-s-cnt;
+	se+=n-1-cnt;
+	return se;
+}
+int main()
+{
+	freopen("interesting.in","r",stdin);
+	freopen("interesting.out","w",stdout);
+	scanf("%d%d",&n,&m);
+	int a,b;
+	for(int i=1;i<=m;i++)
+	{
+		scanf("%d%d",&a,&b);
+		map[a][b]=1;
+	   in[b]++;out[a]++;
+	}
+	for(int i=1;i<=n;i++)
+	{
+		ans=min(ans,solve(i));
+	}
+	printf("%d",ans);
+	return 0;
+}
+```
+T2:中等网络流，但我是模板侠。。。。虽然知道怎么做但是。。
+哎。（···）；
+```cpp
+#include<cstdio>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+#include<cmath>
+#include<queue>
+using namespace std;
+const int inf=0x3f3f3f3f;
+int a[1000001],x[1000001],y[1000001];
+struct zk
+{
+	int u,v,next,w;
+}e[5000001];
+int prime[100001];
+int mark[100001],dep[1000001],tot,cnt=0,head[1000001];
+
+void add(int u,int v,int w)
+{
+	e[cnt].u=u;
+	e[cnt].v=v;
+	e[cnt].w=w;
+	e[cnt].next=head[u];
+	head[u]=cnt++;
+	e[cnt].u=v;
+	e[cnt].v=u;
+	e[cnt].w=0;
+	e[cnt].next=head[v];
+	head[v]=cnt++;
+}
+int bfs(int s,int t)
+{
+	queue<int> q;
+	q.push(s);
+	memset(dep,0,sizeof(dep));
+	dep[s]=1;
+	while(!q.empty())
+	{
+		int u=q.front();
+		q.pop();
+		if (u==t) return 1;
+		for(int i=head[u];i!=-1;i=e[i].next)
+		{
+			int v=e[i].v;
+			if (!dep[v]&&e[i].w)
+			{
+				q.push(v);
+				dep[v]=dep[u]+1;
+			}
+		}
+	}
+	return dep[t]!=-1;
+}
+int dfs(int u,int t,int minn)
+{
+	if (u==t) return minn;
+	int flow=0,ca=0;
+	for(int i=head[u];i!=-1;i=e[i].next)
+	{
+		int v=e[i].v;
+		int w=e[i].w;
+		if (w&&dep[v]==dep[u]+1)
+		{
+			flow=dfs(v,t,min(minn-ca,e[i].w));
+			e[i].w-=flow;
+			e[i^1].w+=flow;
+			ca+=flow;
+			if (ca==minn) return ca;
+		}
+	}
+	return ca;
+}
+void getprime(int n)
+{
+	memset(mark,-1,sizeof(mark));
+    mark[1] = mark[0] = 0;
+    tot=0;
+    for (int i=2;i<n;i++)
+    {
+        if (~mark[i])continue;
+        tot++;
+        prime[tot]=i;
+        for(int j=2*i;j<n;j+=i)
+        mark[j]=i;
+    }
+}int n,m;
+bool judge(int num)  //这尼玛是什么？
+{
+    if (num<=sqrt(1e9)) return false;
+    for (int i=0;i<=tot&&prime[i]*prime[i]<=num;i++) 
+        if (num%prime[i]==0) return false;
+    return true;
+}
+int dinic(int s,int t)
+{
+	int ans=0;
+	while(bfs(s,t))
+	ans+=dfs(s,t,inf);
+	return ans;
+}
+int num[100001];
+int main()
+{
+//	freopen("operation.in","r",stdin);
+//	freopen("operation.out","w",stdout);
+    scanf("%d%d",&n,&m);
+    int s=0,t=n+1;
+    for(int i=1;i<=n;i++)
+    {
+    	scanf("%d",&a[i]);
+    }
+    for(int i=1;i<=m;i++)
+    {
+    	scanf("%d%d",&x[i],&y[i]);
+    	if (y[i]%2==1) swap(x[i],y[i]);
+    }
+    getprime(100000);
+    int ans=0;
+    for(int i=2;i<=sqrt(1e9);i++)
+    {
+    	if (~mark[i]) continue;
+    	memset(head,-1,sizeof(head));
+    	cnt=0;
+    	memset(num,0,sizeof(num));
+    	for(int j=1;j<=n;j++)
+    	{
+    		while(a[j]%i==0)
+    		{
+    			num[j]++;
+    			a[j]/=i;
+    		}
+    	}
+    	for(int j=1;j<=n;j+=2)
+    	add(s,j,num[j]);
+    	for(int j=2;j<=n;j+=2)
+    	add(j,t,num[j]);
+    	for(int j=1;j<=m;j++)
+    	{
+         int w=min(num[x[j]],num[y[j]]);
+         add(x[j],y[j],w);
+    	}
+    	ans+=dinic(s,t);
+    }
+    memset(head,-1,sizeof(head));
+    cnt=0;
+    for(int i=1;i<=n;i+=2)
+    if (judge(a[i])) add(s,i,1);
+    for(int i=2;i<=n;i+=2)
+    if (judge(a[i])) add(i,t,1);
+    for(int i=1;i<=m;i++)
+    if (a[x[i]]!=1&&a[x[i]]==a[y[i]]) add(x[i],y[i],1);
+    ans+=dinic(s,t);
+    printf("%d",ans);
+    return 0;
+}//这是一份RE的代码
+```
+T3:贪心+费用流。
+这道题的模型并不明显，但是经过对题目性质的分析，我们就可以找到切入点。 
+贪心地想，为了在最短的步数之内达到理想状态，我们可知解题的两个性质：
+首先，对于某一只与可配对鞋子不相邻的鞋子，它或它的配对鞋一定是移动或被移动过的。对于每一对可匹配的鞋子，它们不会同时被移动。
+那么我们可以考虑，将网格内的点分为两个集合，每个集合内的点都互不相邻。然后从源点向其中一个集合的点连一条流量为1权值为0的边，另一个集合的点向汇点连一条流量为1权值为0的边。对于与源点相连的那个集合的点，向相邻的点连边，可以匹配的连权值为0的边，不可匹配的连权值为1的边。 
+跑一边最小费用最大流可以得到答案。
+```cpp
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <algorithm>
+#define maxn 1010
+#define maxm 50000+10
+#define inf 0x3f3f3f3f
+#define LL long long
+using namespace std;
+struct zk
+{
+    int from, to, cap, flow, cost, next;
+}e[maxm];
+int head[maxn], cnt;
+int dis[maxn];
+int pre[maxn];
+bool vis[maxn];
+int n, m,k;
+void add(int u, int v, int w, int c)
+{
+    zk E1 = {u,v, w, 0, c, head[u]};
+    e[cnt] = E1;
+    head[u] = cnt++;
+    zk E2 = {v, u, 0, 0, -c, head[v]};
+    e[cnt] = E2;
+    head[v] = cnt++;
+}
+bool spfa(int s, int t)
+{
+    queue<int> q;
+    memset(dis, inf, sizeof(dis));
+    memset(vis, false, sizeof(vis));
+    memset(pre, -1, sizeof(pre));
+    dis[s] = 0;
+    vis[s] = true;
+    q.push(s);
+    while(!q.empty())
+    {
+        int u = q.front();
+        q.pop();
+        vis[u] = false;
+        for(int i = head[u]; i != -1; i = e[i].next)
+        {
+            if(dis[e[i].to] > dis[u] + e[i].cost && e[i].cap > e[i].flow)
+            {
+                dis[e[i].to] = dis[u] + e[i].cost;
+                pre[e[i].to] = i;
+                if(!vis[e[i].to])
+                {
+                    vis[e[i].to] = true;
+                    q.push(e[i].to);
+                }
+            }
+        }
+    }
+    return pre[t] != -1;
+}
+int minn(int s, int t)
+{
+   int cost= 0;
+    while(spfa(s, t))
+    {
+        int minn = inf;
+        for(int i = pre[t]; i != -1; i = pre[e[i^1].to])
+        {
+            minn = min(minn, e[i].cap - e[i].flow);
+        }
+        for(int i = pre[t]; i != -1; i = pre[e[i^1].to])
+        {
+            e[i].flow += minn;
+            e[i^1].flow -= minn;
+            cost += e[i].cost * minn;
+        }
+    }
+    return cost;
+}const int dir[4][2]={{1,0},{0,1},{-1,0},{0,-1}};
+int a[3001][3001];
+int main()
+{
+    scanf("%d%d",&n,&m);
+    cnt=0;
+    memset(head,-1,sizeof head);
+    for(int i=1;i<=n;i++)
+    for(int j=1;j<=m;j++)
+    {
+    	scanf("%d",&a[i][j]);
+    }
+    int S=0,T=(n*m+1);
+    for(int i=1;i<=n;i++)
+    for(int j=1;j<=m;j++) {
+        if((i&1)==(j&1)) add((i-1)*m+j,T,1,0);
+        else {
+            add(S,(i-1)*m+j,1,0);
+            for(int k=0;k<4;k++) {
+                int x=i+dir[k][0],y=j+dir[k][1];
+                if(x<1 || y<1 || x>n || y>m) continue;
+                add((i-1)*m+j,(x-1)*m+y,1,(a[i][j]!=a[x][y]));
+            }
+        }
+    }
+    printf("%d",minn(0,T));
+    return 0;
+}
+```
+#②错误原因
+总之就是一点，回忆模板久远，耗时整场比赛。
+#③改进措施
+对写过做过的学过的知识加强熟悉，宁愿多花点时间去敲一遍模板再做题，也不要直接复制粘贴模板只写建图。
+毕竟，正规比赛的时候是没有模板可以套用的。
+对所学知识进行一个新的自己的理解，提高自己代码AC率（代码毒瘤无法直视），慢慢让自己脱离写一道题20分钟，改一道题2个小时的困境（心累）。
+#④对以后的思考
+觉得还是应该打好基础，不要图快，自己学不是别人学。别被别人的节奏带偏，毕竟自己和别人的学习规划不一样。
+还是一步步来吧，文化知识和OI两不误，并不想一直都泡在机房，还是想学一些其他东西，虽然暂时OI学的要慢一点，但我觉得只要不慌一切都行。
+
